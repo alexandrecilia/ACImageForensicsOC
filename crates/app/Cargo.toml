@@ -1,0 +1,16 @@
+[package]
+name = "app"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "ACImageForensics"
+path = "src/main.rs"
+
+[dependencies]
+eframe = "0.34"
+image = "0.25"
+rfd = "0.17"
+libloading = "0.8"
+chrono = "0.4"
+plugin_api = { path = "../plugin_api" }

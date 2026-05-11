@@ -1,0 +1,12 @@
+[package]
+name = "plugin_mosaic_analysis"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+plugin_api = { path = "../plugin_api" }
+image = "0.25"
+rayon = "1.8"

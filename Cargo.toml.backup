@@ -1,0 +1,12 @@
+[package]
+name = "image_forensics_viewer"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+eframe = "0.34"
+image = "0.25"
+imageproc = "0.26.2"
+jpeg-encoder = "0.7.0"
+ndarray = "0.17.2"
+rfd = "0.17"

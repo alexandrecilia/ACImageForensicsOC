@@ -1,0 +1,11 @@
+C:\Users\alexa\Git\ACImageForensicsOC\crates\app\target\debug\deps\egui_wgpu-a25838f078786753.d: C:\Users\alexa\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\egui-wgpu-0.34.2\src\lib.rs C:\Users\alexa\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\egui-wgpu-0.34.2\src\renderer.rs C:\Users\alexa\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\egui-wgpu-0.34.2\src\setup.rs C:\Users\alexa\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\egui-wgpu-0.34.2\src\capture.rs C:\Users\alexa\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\egui-wgpu-0.34.2\src\winit.rs C:\Users\alexa\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\egui-wgpu-0.34.2\src\egui.wgsl C:\Users\alexa\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\egui-wgpu-0.34.2\src\texture_copy.wgsl
+
+C:\Users\alexa\Git\ACImageForensicsOC\crates\app\target\debug\deps\libegui_wgpu-a25838f078786753.rmeta: C:\Users\alexa\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\egui-wgpu-0.34.2\src\lib.rs C:\Users\alexa\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\egui-wgpu-0.34.2\src\renderer.rs C:\Users\alexa\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\egui-wgpu-0.34.2\src\setup.rs C:\Users\alexa\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\egui-wgpu-0.34.2\src\capture.rs C:\Users\alexa\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\egui-wgpu-0.34.2\src\winit.rs C:\Users\alexa\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\egui-wgpu-0.34.2\src\egui.wgsl C:\Users\alexa\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\egui-wgpu-0.34.2\src\texture_copy.wgsl
+
+C:\Users\alexa\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\egui-wgpu-0.34.2\src\lib.rs:
+C:\Users\alexa\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\egui-wgpu-0.34.2\src\renderer.rs:
+C:\Users\alexa\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\egui-wgpu-0.34.2\src\setup.rs:
+C:\Users\alexa\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\egui-wgpu-0.34.2\src\capture.rs:
+C:\Users\alexa\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\egui-wgpu-0.34.2\src\winit.rs:
+C:\Users\alexa\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\egui-wgpu-0.34.2\src\egui.wgsl:
+C:\Users\alexa\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\egui-wgpu-0.34.2\src\texture_copy.wgsl:
