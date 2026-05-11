@@ -22,6 +22,7 @@ struct ImageViewer {
     plugins: Vec<PluginInstance>,
     selected_plugin: usize,
     right_click_down: bool,
+    zoom_nearest: bool,
 }
 
 /// Default constructor that initializes state and loads all available plugins.
@@ -38,6 +39,7 @@ impl Default for ImageViewer {
             plugins: Vec::new(),
             selected_plugin: 0,
             right_click_down: false,
+            zoom_nearest: true,
         };
         viewer.load_plugins();
         viewer
@@ -46,47 +48,57 @@ impl Default for ImageViewer {
 
 /// Internal helper methods for plugin loading, image processing, and UI state management.
 impl ImageViewer {
-    // Loads all available plugins from DLLs found in the plugin search paths.
+    // Loads all available plugins by scanning for plugin_*.dll in the executable directory.
     fn load_plugins(&mut self) {
-        let plugin_names = [
-            "plugin_classic",
-            "plugin_ela",
-            "plugin_jpeg_ghost",
-            "plugin_jpeg_ghost_alt",
-            "plugin_noise_kurtosis",
-            "plugin_noise_variance",
-            "plugin_sensor_noise",
-            "plugin_mini_nand_jpeg",
-            "plugin_texture_inconsistency",
-            "plugin_gradient_forensics",
-            "plugin_zero",
-            "plugin_noise_analysis",
-            "plugin_mosaic_analysis",
-            "plugin_cfa_detector",
-            "plugin_forensically_ela",
-            "plugin_penet_srm_selector",
-            "plugin_sherloq_ela",
-            "plugin_sherloq_ghost",
-            "plugin_gimp_forensics_ela",
-            "plugin_gimp_forensics_ghost",
-        ];
+        let mut search_dirs = Vec::new();
 
-        for plugin_name in &plugin_names {
-            let dll_path = get_plugin_path(plugin_name);
-            eprintln!("Loading plugin: {}", dll_path);
-            if std::path::Path::new(&dll_path).exists() {
-                match unsafe { self.load_plugin(&dll_path) } {
+        // Exe directory (primary)
+        if let Ok(exe) = std::env::current_exe() {
+            if let Some(dir) = exe.parent() {
+                search_dirs.push(dir.to_path_buf());
+            }
+        }
+        // Current directory (secondary, for development)
+        if let Ok(cwd) = std::env::current_dir() {
+            search_dirs.push(cwd);
+        }
+
+        // Track by filename only (not full path) to avoid loading the same plugin twice
+        let mut seen_names = std::collections::HashSet::new();
+
+        for dir in &search_dirs {
+            if !dir.exists() { continue; }
+            let entries = match std::fs::read_dir(dir) {
+                Ok(e) => e,
+                Err(_) => continue,
+            };
+            for entry in entries.flatten() {
+                let path = entry.path();
+                let filename = match path.file_name().and_then(|n| n.to_str()) {
+                    Some(f) => f.to_string(),
+                    None => continue,
+                };
+                if !filename.starts_with("plugin_") || !filename.ends_with(".dll") {
+                    continue;
+                }
+                // Deduplicate by filename (not path) — same plugin in multiple dirs
+                if !seen_names.insert(filename.clone()) {
+                    continue;
+                }
+                // Skip known non-functional DLLs
+                if filename == "plugin_penet_steganalysis.dll" { continue; }
+                eprintln!("Loading plugin: {}", path.display());
+                match unsafe { self.load_plugin(path.to_str().unwrap()) } {
                     Ok(plugin) => {
                         eprintln!("✓ Plugin loaded: {}", plugin.plugin.name());
                         self.plugins.push(plugin);
                     }
-                    Err(e) => eprintln!("✗ Error loading {}: {:?}", plugin_name, e),
+                    Err(e) => eprintln!("✗ Error loading {}: {:?}", filename, e),
                 }
-            } else {
-                eprintln!("✗ File not found: {}", dll_path);
             }
         }
         eprintln!("Total plugins loaded: {}", self.plugins.len());
+        self.plugins.sort_by(|a, b| a.plugin.name().cmp(b.plugin.name()));
     }
 
     // Loads a single plugin DLL via unsafe FFI, retrieving the `create_plugin` constructor symbol.
@@ -103,9 +115,19 @@ impl ImageViewer {
     // Opens a save-file dialog and writes the current processed image to disk.
     fn save_current_result(&self) {
         if let Some(ref img) = self.processed_image {
+            let stem = self.image_path
+                .as_ref()
+                .and_then(|p| p.file_stem())
+                .and_then(|s| s.to_str())
+                .unwrap_or("image");
+            let plugin_name = self.plugins
+                .get(self.selected_plugin)
+                .map(|p| p.plugin.name())
+                .unwrap_or("result");
+            let suggested = format!("{}_{}.png", stem, plugin_name);
             if let Some(path) = rfd::FileDialog::new()
                 .add_filter("PNG", &["png"])
-                .set_file_name("result.png")
+                .set_file_name(&suggested)
                 .save_file()
             {
                 if img.save(&path).is_ok() {
@@ -119,7 +141,7 @@ impl ImageViewer {
         }
     }
 
-    fn export_all_html(&mut self) {
+    fn export_all_html(&mut self, ctx: &egui::Context) {
         // Clone the original image; abort if nothing is loaded
         let original = match self.original_image {
             Some(ref img) => img.clone(),
@@ -172,6 +194,8 @@ impl ImageViewer {
             chrono::Local::now().format("%Y-%m-%d %H:%M:%S")
         ));
 
+        let total = self.plugins.len();
+
         // Run each plugin on the original image and generate a card in the report
         for (i, instance) in self.plugins.iter().enumerate() {
             let name = instance.plugin.name().to_string();
@@ -179,6 +203,10 @@ impl ImageViewer {
             let ref_url = instance.plugin.reference().to_string();
             let safe_name = name.replace(|c: char| !c.is_alphanumeric() && c != '-', "_");
             let filename = format!("{:02}_{}.png", i, safe_name);
+
+            let msg = format!("Exporting {}/{}: {} ...", i + 1, total, name);
+            ctx.send_viewport_cmd(egui::ViewportCommand::Title(msg.clone()));
+            eprintln!("[Export] {}", msg);
 
             let result = instance.plugin.process(&original);
             if let Some(img) = result {
@@ -212,6 +240,7 @@ impl ImageViewer {
         } else {
             self.set_status("Error creating HTML report");
         }
+        ctx.send_viewport_cmd(egui::ViewportCommand::Title("ACImageForensics".to_string()));
     }
 
     fn set_status(&self, msg: &str) {
@@ -225,25 +254,6 @@ fn escape_html(s: &str) -> String {
         .replace('<', "&lt;")
         .replace('>', "&gt;")
         .replace('"', "&quot;")
-}
-
-/// Resolves the filesystem path to a plugin DLL by name, searching near the executable and current directory.
-fn get_plugin_path(name: &str) -> String {
-    let filename = format!("{}.dll", name);
-    // Look for DLLs in the same directory as the executable
-    if let Ok(exe) = std::env::current_exe() {
-        if let Some(dir) = exe.parent() {
-            let p = dir.join(&filename);
-            if p.exists() {
-                return p.to_string_lossy().to_string();
-            }
-        }
-    }
-    // Fallback: current directory (cargo run from workspace root)
-    if std::path::Path::new(&filename).exists() {
-        return filename;
-    }
-    format!("target/debug/{}", filename)
 }
 
 /// Implements the eframe::App trait to render the GUI loop via egui.
@@ -291,7 +301,7 @@ impl eframe::App for ImageViewer {
                 }
 
                 if ui.button("📊 Run All & Export HTML").clicked() {
-                    self.export_all_html();
+                    self.export_all_html(ui.ctx());
                 }
 
                 ui.separator();
@@ -317,6 +327,17 @@ impl eframe::App for ImageViewer {
                                 }
                             }
                         });
+                }
+
+                ui.separator();
+
+                let mut smooth = !self.zoom_nearest;
+                if ui.checkbox(&mut smooth, "Smooth Zoom").changed() {
+                    self.zoom_nearest = !smooth;
+                    self.rebuild_textures(ui.ctx());
+                }
+                if ui.button("❓ Help").clicked() {
+                    let _ = webbrowser::open("https://github.com/alexandrecilia/ACImageForensicsOC");
                 }
             });
 
@@ -385,6 +406,26 @@ impl eframe::App for ImageViewer {
 
         // Image display area — separated from controls
         egui::CentralPanel::default().show_inside(ui, |ui| {
+            // Ctrl+C: copy displayed image to clipboard
+            if ui.input(|i| i.key_pressed(egui::Key::C) && i.modifiers.ctrl && !i.modifiers.alt && !i.modifiers.shift) {
+                if let Some(img) = self.current_display_image() {
+                    let (w, h) = img.dimensions();
+                    let mut rgba = Vec::with_capacity((w * h * 4) as usize);
+                    for p in img.pixels() {
+                        rgba.push(p[0]);
+                        rgba.push(p[1]);
+                        rgba.push(p[2]);
+                        rgba.push(255);
+                    }
+                    if let Ok(mut cb) = arboard::Clipboard::new() {
+                        let _ = cb.set_image(arboard::ImageData {
+                            width: w as usize,
+                            height: h as usize,
+                            bytes: std::borrow::Cow::Owned(rgba),
+                        });
+                    }
+                }
+            }
             if let Some(texture) = &self.texture {
                 let img_size = texture.size_vec2();
                 let available_size = ui.available_size();
@@ -445,7 +486,11 @@ impl eframe::App for ImageViewer {
                 ui.label("Processing...");
             } else {
                 ui.label(
-                    "No image loaded. Drag & drop a JPEG image or click 'Load JPEG Image'.",
+                    "No image loaded. Drag & drop a JPEG image or click 'Load JPEG Image'.\n\n\
+                     Navigation:\n\
+                     • Left-click + drag: Pan the image\n\
+                     • Right-click + drag: Zoom into a region\n\
+                     • Scroll wheel: Zoom in/out",
                 );
             }
         });
@@ -476,8 +521,15 @@ impl ImageViewer {
         }
     }
 
+    /// Rebuilds both GPU textures with the current zoom filter setting.
+    fn rebuild_textures(&mut self, ctx: &egui::Context) {
+        self.texture = None;
+        self.original_texture = None;
+        self.create_texture(ctx);
+    }
+
     /// Converts an RgbImage into an egui GPU texture for rendering.
-    fn make_texture(ctx: &egui::Context, id: &str, img: &RgbImage) -> egui::TextureHandle {
+    fn make_texture(ctx: &egui::Context, id: &str, img: &RgbImage, nearest: bool) -> egui::TextureHandle {
         let size = [img.width() as usize, img.height() as usize];
         let pixels: Vec<egui::Color32> = img
             .pixels()
@@ -488,28 +540,48 @@ impl ImageViewer {
             pixels,
             source_size: egui::vec2(size[0] as f32, size[1] as f32),
         };
+        let filter = if nearest { egui::TextureFilter::Nearest } else { egui::TextureFilter::Linear };
         ctx.load_texture(
             id,
             egui::ImageData::Color(std::sync::Arc::new(color_image)),
-            egui::TextureOptions::default(),
+            egui::TextureOptions { magnification: filter, minification: filter, ..Default::default() },
         )
     }
 
     /// Creates GPU textures for both the processed and original images.
     fn create_texture(&mut self, ctx: &egui::Context) {
         if let Some(ref img) = self.processed_image {
-            self.texture = Some(Self::make_texture(ctx, "processed_image", img));
+            self.texture = Some(Self::make_texture(ctx, "processed_image", img, self.zoom_nearest));
         }
         if let Some(ref img) = self.original_image {
-            self.original_texture = Some(Self::make_texture(ctx, "original_image", img));
+            self.original_texture = Some(Self::make_texture(ctx, "original_image", img, self.zoom_nearest));
+        }
+    }
+
+    /// Returns the currently displayed image (processed or original if right-click is held).
+    fn current_display_image(&self) -> Option<&RgbImage> {
+        if self.right_click_down {
+            self.original_image.as_ref()
+        } else {
+            self.processed_image.as_ref()
         }
     }
 }
 
 /// Application entry point: configures the native window and launches the egui event loop.
 fn main() -> eframe::Result<()> {
+    let icon_img = image::load_from_memory(include_bytes!("acimageforensics.png"))
+        .expect("Failed to load icon")
+        .into_rgba8();
+    let (w, h) = icon_img.dimensions();
     let options = eframe::NativeOptions {
-        viewport: egui::ViewportBuilder::default().with_inner_size(egui::vec2(800.0, 600.0)),
+        viewport: egui::ViewportBuilder::default()
+            .with_inner_size(egui::vec2(800.0, 600.0))
+            .with_icon(egui::IconData {
+                rgba: icon_img.into_raw(),
+                width: w,
+                height: h,
+            }),
         ..Default::default()
     };
     eframe::run_native(
