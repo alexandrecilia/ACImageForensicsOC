@@ -4,7 +4,7 @@ AC Image Forensics is an experimental digital image forensic analysis tool writt
 
 ## 💡 Genesis & Philosophy
 
-The project was born from a desire to transform scientific publications and existing Python-based forensic tools into portable executable. While Python is excellent for research, deploying and executing these tools often involves complex environment setups. By porting these algorithms to Rust, the project achieves good performance and stability and ease of deployment: A single binary with dynamic plugins, eliminating the need for Python runtimes or dependency hell.
+The project was born from a desire to transform scientific publications and existing Python-based forensic tools into a portable executable. While Python is excellent for research, deploying and executing these tools often involves complex environment setups. By porting these algorithms to Rust, the project achieves good performance and stability and ease of deployment: A single binary with dynamic plugins, eliminating the need for Python runtimes or dependency hell.
 
 
 ### Vibe Coding with opencode
@@ -17,8 +17,8 @@ The application provides a suite of specialized forensic tools organized into a 
 ### Analysis Categories
 
 #### 📉 Compression & Quantization
-- **Error Level Analysis (ELA)**: Multiple variants (Classic, Sherloq, GIMP-style, Forensically-style) to detect re-compression inconsistencies.
-- **JPEG Ghost**: Multiple variants (Classic, Sherloq, GIMP-style, Alt) to detect "ghost" artifacts from multiple JPEG compression cycles.
+- **Error Level Analysis (ELA)**: Multiple variants (Sherloq, GIMP-style, Forensically-style) to detect re-compression inconsistencies.
+- **JPEG Ghost**: Multiple variants (Sherloq, GIMP-style, Alt) to detect "ghost" artifacts from multiple JPEG compression cycles.
 - **miniNand-JPEG**: Analyzes 8x8 block-level differences to identify double compression.
 
 #### 🔊 Noise & Texture Analysis
